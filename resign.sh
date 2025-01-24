@@ -45,7 +45,7 @@ fi
 ## Step 2: 移除旧的签名，移除PlugIns/Watch目录(可选)，如不移除则需要签名
 rm -rf ${appDir}/_CodeSignature/
 rm -rf ${appDir}/CodeResources
-#rm -rf ${appDir}/PlugIns
+rm -rf ${appDir}/PlugIns
 rm -rf ${appDir}/Watch
 
 ## Step 3: 复制新的 Provisioning Profile，生成entitlements文件
@@ -91,6 +91,11 @@ done
 
 
 # Step 5: 对主应用进行签名
+
+#可选
+#defaults write ${appDir}/Info CFBundleDisplayName "hello"
+#defaults write ${appDir}/Info CFBundleIdentifier "com.peach.hello"
+
 echo "签名主应用..."
 /usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist ${appDir}
 if [ $? -ne 0 ]; then
