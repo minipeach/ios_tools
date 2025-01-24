@@ -42,10 +42,11 @@ else
 fi
 
 
-## Step 2: 移除旧的签名和插件目录
+## Step 2: 移除旧的签名，移除PlugIns/Watch目录(可选)，如不移除则需要签名
 rm -rf ${appDir}/_CodeSignature/
 rm -rf ${appDir}/CodeResources
-rm -rf ${appDir}/PlugIns
+#rm -rf ${appDir}/PlugIns
+rm -rf ${appDir}/Watch
 
 ## Step 3: 复制新的 Provisioning Profile，生成entitlements文件
 cp ${path}/embedded.mobileprovision ${appDir}/
@@ -61,6 +62,18 @@ find "$appDir" -type d -name "*.framework" | while read -r framework; do
   /usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist "$framework"
   if [ $? -ne 0 ]; then
     echo "签名失败：$framework"
+    exit 1
+  fi
+done
+
+echo "签名 appex..."
+
+find "$appDir" -type d -name "*.appex" | while read -r appex; do
+  echo "Found appex: $appex"
+  /usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist "$appex"
+  cp ${path}/embedded.mobileprovision ${appex}
+  if [ $? -ne 0 ]; then
+    echo "签名失败：$appex"
     exit 1
   fi
 done
