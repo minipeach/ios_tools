@@ -71,11 +71,11 @@ echo "签名 appex..."
 find "$appDir" -type d -name "*.appex" | while read -r appex; do
   echo "Found appex: $appex"
   /usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist "$appex"
-  cp ${path}/embedded.mobileprovision ${appex}
   if [ $? -ne 0 ]; then
     echo "签名失败：$appex"
     exit 1
   fi
+  cp ${path}/embedded.mobileprovision ${appex}
 done
 
 echo "签名 dylib..."
