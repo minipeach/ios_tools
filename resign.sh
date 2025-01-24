@@ -1,5 +1,8 @@
 #!/bin/bash
 # ipa文件，entitlements.plist，embedded.mobileprovision 请放同一目录下
+# 该脚本已包含了entitlements.plist的自动生成
+# 通过security find-identity -p codesigning -v 查看证书
+# 通过codesign -dvvv Payload/xxx.app 查看签名信息
 
 if ! ([ -f "$1" ]); then
   echo "\"${1}\" 文件不存在"
@@ -39,12 +42,16 @@ else
 fi
 
 
-## Step 2: 移除旧的签名
+## Step 2: 移除旧的签名和插件目录
 rm -rf ${appDir}/_CodeSignature/
 rm -rf ${appDir}/CodeResources
+rm -rf ${appDir}/PlugIns
 
-## Step 3: 复制新的 Provisioning Profile
+## Step 3: 复制新的 Provisioning Profile，生成entitlements文件
 cp ${path}/embedded.mobileprovision ${appDir}/
+security cms -D -i ${path}/embedded.mobileprovision > ${path}/profile.plist
+/usr/libexec/PlistBuddy -x -c 'Print :Entitlements' ${path}/profile.plist > ${path}/entitlements.plist
+
 
 ## Step 4: 对 Framework 和动态库进行签名
 echo "签名 Frameworks..."
