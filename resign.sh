@@ -15,10 +15,49 @@ if [ "$ipaName" = "$1" ]; then
   exit 1
 fi
 
+# 初始化变量
+filename=""
+name=""
+id=""
+
+# 获取第一个位置参数，即文件名
+if [ $# -gt 0 ]; then
+    filename=$1
+    shift 
+fi
+
+
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        -name)
+            if [ "$2" ]; then
+                name=$2
+                shift 2 
+            else
+                echo "Error: -name requires a value."
+                exit 1
+            fi
+            ;;
+        -id)
+            if [ "$2" ]; then
+                id=$2
+                shift 2
+            else
+                echo "Error: -id requires a value."
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unknown parameter passed: $1"
+            exit 1
+            ;;
+    esac
+done
+
 
 cert="Apple Development: XXX XXX (9HXXXXXXXX)"
 
-ipaFilePath=$(realpath "$1")  
+ipaFilePath=$(realpath "$filename")  
 echo "IPA 文件路径是：$ipaFilePath"
 
 path=$(dirname "$ipaFilePath")
@@ -27,10 +66,13 @@ echo "IPA 文件目录是：$path"
 ipaFileName=$(basename "$ipaFilePath" .ipa)
 echo "IPA 文件名称是：$ipaFileName"
 
-## Step 1: 解压 IPA 文件
-unzip -q -o $ipaFilePath -d $path
+resignPath=${path}/${ipaFileName}
+echo "IPA resign目录是：$resignPath"
 
-appDir=$(ls -d ${path}/Payload/*.app | head -n 1)
+## Step 1: 解压 IPA 文件
+unzip -q -o $ipaFilePath -d $resignPath
+
+appDir=$(ls -d ${resignPath}/Payload/*.app | head -n 1)
 
 
 # 判断是否找到了 .app 文件夹
@@ -47,6 +89,7 @@ rm -rf ${appDir}/_CodeSignature/
 rm -rf ${appDir}/CodeResources
 rm -rf ${appDir}/PlugIns
 rm -rf ${appDir}/Watch
+
 
 ## Step 3: 复制新的 Provisioning Profile，生成entitlements文件
 cp ${path}/embedded.mobileprovision ${appDir}/
@@ -90,11 +133,58 @@ find "$appDir" -type f -name "*.dylib" | while read -r dylib; do
 done
 
 
+# if [ -d "${appDir}/Frameworks" ]; then
+#   for framework in ${appDir}/Frameworks/*.framework; do
+#     if [ -n "$framework" ]; then
+#       echo "签名 -> ${framework}"
+#       /usr/bin/codesign -f -s "" --entitlements entitlements.plist "$framework"
+#       if [ $? -ne 0 ]; then
+#         echo "签名失败：$framework"
+#         exit 1
+#       fi
+#     fi
+#   done
+
+#   for dylib in ${appDir}/Frameworks/*.dylib; do
+#     if [ -f "$dylib" ]; then
+#       echo "签名 -> ${dylib}"
+#       /usr/bin/codesign -f -s "Apple Development: JiaHong Xu (9HREN3LD7L)" --entitlements entitlements.plist "$dylib"
+#       if [ $? -ne 0 ]; then
+#         echo "签名失败：$dylib"
+#         exit 1
+#       fi
+#     fi
+#   done
+# fi
+
+
+#   for dylib in ${appDir}/iPatchDylibs/*.dylib; do
+#     if [ -f "$dylib" ]; then
+#       echo "签名 -> ${dylib}"
+#       /usr/bin/codesign -f -s "Apple Development: JiaHong Xu (9HREN3LD7L)" --entitlements entitlements.plist "$dylib"
+#       if [ $? -ne 0 ]; then
+#         echo "签名失败：$dylib"
+#         exit 1
+#       fi
+#     fi
+#   done
+
+
 # Step 5: 对主应用进行签名
 
 #可选
 #defaults write ${appDir}/Info CFBundleDisplayName "hello"
-#defaults write ${appDir}/Info CFBundleIdentifier "com.peach.hello"
+#defaults write ${appDir}/Info CFBundleIdentifier "com.peach.test"
+
+if [ "$name" ]; then
+  defaults write ${appDir}/Info CFBundleDisplayName "$name"
+fi
+
+if [ "$id" ]; then
+  defaults write ${appDir}/Info CFBundleIdentifier "$id"
+fi
+
+
 
 echo "签名主应用..."
 /usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist ${appDir}
@@ -106,11 +196,11 @@ fi
 
 # Step 6: 打包新的 IPA
 #此处必须cd进去执行zip，否则无法安装
-cd $path
+cd $resignPath
 zip -q -r ${path}/${ipaFileName}New.ipa Payload/
 if [ $? -eq 0 ]; then
   echo "重新签名的 IPA 已成功打包：${ipaFileName}New.ipa"
-  rm -rf ${path}/Payload/
+  #rm -rf ${resignPath}
 else
   echo "打包失败"
   exit 1
