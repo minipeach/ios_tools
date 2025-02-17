@@ -92,7 +92,7 @@ rm -rf ${appDir}/Watch
 
 
 ## Step 3: 复制新的 Provisioning Profile，生成entitlements文件
-cp ${path}/embedded.mobileprovision ${appDir}/
+cp "${path}/embedded.mobileprovision" "${appDir}/"
 security cms -D -i ${path}/embedded.mobileprovision > ${path}/profile.plist
 /usr/libexec/PlistBuddy -x -c 'Print :Entitlements' ${path}/profile.plist > ${path}/entitlements.plist
 
@@ -118,7 +118,7 @@ find "$appDir" -type d -name "*.appex" | while read -r appex; do
     echo "签名失败：$appex"
     exit 1
   fi
-  cp ${path}/embedded.mobileprovision ${appex}
+  cp "${path}/embedded.mobileprovision" "${appex}"
 done
 
 echo "签名 dylib..."
@@ -187,7 +187,7 @@ fi
 
 
 echo "签名主应用..."
-/usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist ${appDir}
+/usr/bin/codesign -f -s "${cert}" --entitlements ${path}/entitlements.plist "${appDir}"
 if [ $? -ne 0 ]; then
   echo "主应用签名失败"
   exit 1
